@@ -30,3 +30,42 @@ cargo build
 ```bash
 sudo RUST_LOG=debug ./target/debug/signals
 ```
+
+## Output
+
+```
+$ cargo build && sudo RUST_LOG=debug ./target/debug/signals                                                                                                            
+    Finished dev [unoptimized + debuginfo] target(s) in 0.07s                                             
+[2022-12-23T21:52:04Z DEBUG aya::bpf] [FEAT PROBE] BPF program name support: true                         
+[2022-12-23T21:52:04Z DEBUG aya::bpf] [FEAT PROBE] BTF support: true                                      
+[2022-12-23T21:52:04Z DEBUG aya::bpf] [FEAT PROBE] BTF func support: true                                 
+[2022-12-23T21:52:04Z DEBUG aya::bpf] [FEAT PROBE] BTF global func support: true                          
+[2022-12-23T21:52:04Z DEBUG aya::bpf] [FEAT PROBE] BTF var and datasec support: true                      
+[2022-12-23T21:52:04Z DEBUG aya::bpf] [FEAT PROBE] BTF float support: false                               
+[2022-12-23T21:52:04Z DEBUG aya::bpf] [FEAT PROBE] BTF decl_tag support: false                            
+[2022-12-23T21:52:04Z DEBUG aya::bpf] [FEAT PROBE] BTF type_tag support: false                            
+[2022-12-23T21:52:04Z DEBUG aya::obj::relocation] relocating program signals function signals             
+[2022-12-23T21:52:04Z DEBUG aya::obj::relocation] finished relocating program signals function signals                                                                                                               
+[2022-12-23T21:52:04Z DEBUG signals::emitters] spawning task for cpu 0                                    
+[2022-12-23T21:52:04Z DEBUG signals::emitters] spawning task for cpu 1                                    
+[2022-12-23T21:52:04Z DEBUG signals::emitters] spawning task for cpu 2                                                                                                                                               
+[2022-12-23T21:52:04Z DEBUG signals::emitters] task for cpu awaiting for events 0                         
+[2022-12-23T21:52:04Z DEBUG signals::emitters] task for cpu awaiting for events 1                         
+[2022-12-23T21:52:04Z DEBUG signals::emitters] spawning task for cpu 3                                    
+[2022-12-23T21:52:04Z DEBUG signals::emitters] task for cpu awaiting for events 2                         
+[2022-12-23T21:52:04Z DEBUG signals::emitters] task for cpu awaiting for events 3                         
+[2022-12-23T21:52:04Z DEBUG signals::emitters] spawning task for cpu 4                                    
+[2022-12-23T21:52:04Z DEBUG signals::emitters] spawning task for cpu 5                                    
+[2022-12-23T21:52:04Z DEBUG signals::emitters] task for cpu awaiting for events 4                         
+[2022-12-23T21:52:04Z DEBUG signals::emitters] spawning task for cpu 6                                    
+[2022-12-23T21:52:04Z DEBUG signals::emitters] task for cpu awaiting for events 5                         
+[2022-12-23T21:52:04Z DEBUG signals::emitters] spawning task for cpu 7                                    
+[2022-12-23T21:52:04Z DEBUG signals::emitters] task for cpu awaiting for events 6                                                                                                                                    
+[2022-12-23T21:52:04Z INFO  signals] tasks started, awaiting for events                                   
+[2022-12-23T21:52:04Z DEBUG signals::emitters] task for cpu awaiting for events 7                         
+[2022-12-23T21:52:06Z DEBUG signals] ebpf: enqueued signal 14 for 686                                     
+[2022-12-23T21:52:06Z INFO  signals] Signal { signr: 14, pid: 686 }                                                                                                                                                  
+[2022-12-23T21:52:08Z DEBUG signals] ebpf: enqueued signal 14 for 686                                     
+[2022-12-23T21:52:08Z INFO  signals] Signal { signr: 14, pid: 686 }                                       
+[2022-12-23T21:52:10Z DEBUG signals] ebpf: enqueued signal 17 for 371144
+```

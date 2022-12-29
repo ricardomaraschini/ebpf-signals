@@ -1,21 +1,69 @@
 pub mod emitters;
 
+use env_logger::Env;
 use log::error;
 use log::info;
+use signals_common::Signal;
+use std::collections::HashMap;
+use std::fs::remove_file;
 use std::process;
+use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::broadcast;
-use tokio::task;
 use users::get_current_uid;
+
+const SOCKET_PATH: &str = "/var/run/signals";
+
+async fn handle_stream(stream: UnixStream, mut from: broadcast::Receiver<Signal>) {
+    loop {
+        let sig = match from.recv().await {
+            Ok(sig) => sig,
+            Err(err) => {
+                error!("error reading signal: {}", err);
+                return;
+            }
+        };
+
+        let mut hm = HashMap::new();
+        hm.insert("pid", sig.pid as u64);
+        hm.insert("signr", sig.signr as u64);
+        let mut serial = match serde_json::to_string(&hm) {
+            Ok(serial) => serial,
+            Err(err) => {
+                error!("error serializing signal: {}", err);
+                return;
+            }
+        };
+
+        serial.push('\n');
+        if let Err(err) = stream.try_write(serial.as_bytes()) {
+            error!("unable to write data to the stream: {}", err);
+            return;
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    let env_with_def_loglevel = Env::default().default_filter_or("info");
+    env_logger::Builder::from_env(env_with_def_loglevel).init();
+
+    print_welcome();
 
     if get_current_uid() != 0 {
         error!("running as non root is not supported");
         process::exit(1);
     }
 
+    let _ = remove_file(SOCKET_PATH);
+    let listener = match UnixListener::bind(SOCKET_PATH) {
+        Ok(listener) => listener,
+        Err(err) => {
+            error!("error binding to socket {}: {}", SOCKET_PATH, err);
+            process::exit(1);
+        }
+    };
+
+    info!("loading and attaching to the ebpf program");
     let (tx, _) = broadcast::channel(100);
     let mut bpf = match emitters::SignalEmitter::new() {
         Ok(bpf) => bpf,
@@ -30,27 +78,33 @@ async fn main() {
         process::exit(1);
     }
 
-    let mut join_handles: Vec<task::JoinHandle<()>> = vec![];
-    for i in 0..2 {
-        let mut local_rx = tx.subscribe();
-        join_handles.push(tokio::spawn(async move {
-            loop {
-                let msg = match local_rx.recv().await {
-                    Ok(msg) => msg,
-                    Err(_) => break,
-                };
-
-                info!("[{}] {:?}", i, msg);
+    info!("awaiting for new connections");
+    loop {
+        info!("new connection detected");
+        match listener.accept().await {
+            Ok((stream, _addr)) => {
+                let local_rx = tx.subscribe();
+                tokio::spawn(async move {
+                    handle_stream(stream, local_rx).await;
+                });
             }
-        }));
-    }
-
-    drop(tx);
-
-    for handle in join_handles {
-        if let Err(err) = handle.await {
-            error!("error waiting for thread: {}", err);
-            process::exit(1);
+            Err(err) => {
+                error!("error accepting connection: {}", err);
+                continue;
+            }
         }
     }
+}
+
+fn print_welcome() {
+    info!("                         ");
+    info!(" ███████╗ ██╗ ██████╗    ");
+    info!(" ██╔════╝███║██╔════╝    ");
+    info!(" ███████╗╚██║██║  ███╗   ");
+    info!(" ╚════██║ ██║██║   ██║   ");
+    info!(" ███████║ ██║╚██████╔╝   ");
+    info!(" ╚══════╝ ╚═╝ ╚═════╝    ");
+    info!("                         ");
+    info!("signal emitter development version ");
+    info!("unix socket listening on {}", SOCKET_PATH);
 }

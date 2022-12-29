@@ -73,7 +73,14 @@ impl SignalEmitter {
                         let signal = unsafe { ptr.read_unaligned() };
                         match local_dst.send(signal) {
                             Ok(_) => continue,
-                            Err(err) => error!("failed to send signal internally: {}", err),
+                            Err(err) => {
+                                // if no one is listening the error returned. XXX find a
+                                // better way of handling this.
+                                let errstr = format!("{}", err);
+                                if !errstr.contains("channel closed") {
+                                    error!("failed to send signal internally: {}", err);
+                                }
+                            }
                         }
                     }
                 }

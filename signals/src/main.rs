@@ -80,9 +80,9 @@ async fn main() {
 
     info!("awaiting for new connections");
     loop {
-        info!("new connection detected");
         match listener.accept().await {
             Ok((stream, _addr)) => {
+                info!("new connection accepted");
                 let local_rx = tx.subscribe();
                 tokio::spawn(async move {
                     handle_stream(stream, local_rx).await;
@@ -97,14 +97,16 @@ async fn main() {
 }
 
 fn print_welcome() {
-    info!("                         ");
-    info!(" ███████╗ ██╗ ██████╗    ");
-    info!(" ██╔════╝███║██╔════╝    ");
-    info!(" ███████╗╚██║██║  ███╗   ");
-    info!(" ╚════██║ ██║██║   ██║   ");
-    info!(" ███████║ ██║╚██████╔╝   ");
-    info!(" ╚══════╝ ╚═╝ ╚═════╝    ");
-    info!("                         ");
+    info!(r"       / /\        /\ \       /\ \        ");
+    info!(r"      / /  \       \ \ \     /  \ \       ");
+    info!(r"     / / /\ \__    /\ \_\   / /\ \_\      ");
+    info!(r"    / / /\ \___\  / /\/_/  / / /\/_/      ");
+    info!(r"    \ \ \ \/___/ / / /    / / / _____     ");
+    info!(r"     \ \ \      / / /    / / / /\_____\   ");
+    info!(r" _    \ \ \    / / /    / / /  \/____ /   ");
+    info!(r"/_/\__/ / /___/ / /__  / / /_____/ / /    ");
+    info!(r"\ \/___/ //\__\/_/___\/ / /______\/ /     ");
+    info!(r" \_____\/ \/_________/\/___________/      ");
     info!("signal emitter development version ");
     info!("unix socket listening on {}", SOCKET_PATH);
 }

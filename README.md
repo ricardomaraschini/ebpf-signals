@@ -80,6 +80,7 @@ by listening on that socket, as an example let's use `nc` (note that not all
 `nc` versions have support for Unix Sockets). In a new terminal run:
 
 ```
+$ # sudo socat - UNIX-CONNECT:/var/run/signals # Alternative command
 $ sudo nc.openbsd -U /var/run/signals
 {"pid":671,"signr":9}
 {"signr":17,"pid":668}

@@ -28,6 +28,7 @@ fn create_socket() -> UnixListener {
 // start starts the unix socket listener and handles incoming connections.
 pub async fn start(from: broadcast::Sender<Signal>) {
     let listener = create_socket();
+    info!("unix socket listening on {}", SOCKET_PATH);
     info!("awaiting for new connections");
     loop {
         match listener.accept().await {

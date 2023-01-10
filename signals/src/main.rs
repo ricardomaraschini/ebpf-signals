@@ -7,8 +7,6 @@ use std::process;
 use tokio::sync::broadcast;
 use users::get_current_uid;
 
-const SOCKET_PATH: &str = "/var/run/signals";
-
 #[tokio::main]
 async fn main() {
     let env_with_def_loglevel = Env::default().default_filter_or("info");
@@ -52,5 +50,4 @@ fn print_welcome() {
     info!(r"\ \/___/ //\__\/_/___\/ / /______\/ /     ");
     info!(r" \_____\/ \/_________/\/___________/      ");
     info!("signal emitter development version ");
-    info!("unix socket listening on {}", SOCKET_PATH);
 }

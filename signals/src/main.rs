@@ -1,11 +1,11 @@
 pub mod emitters;
 
 use env_logger::Env;
-use log::error;
-use log::info;
+use log::{error, info};
 use signals_common::Signal;
 use std::collections::HashMap;
 use std::fs::remove_file;
+use std::io::ErrorKind;
 use std::process;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::broadcast;
@@ -14,6 +14,7 @@ use users::get_current_uid;
 const SOCKET_PATH: &str = "/var/run/signals";
 
 async fn handle_stream(stream: UnixStream, mut from: broadcast::Receiver<Signal>) {
+    info!("new connection from accepted");
     loop {
         let sig = match from.recv().await {
             Ok(sig) => sig,
@@ -36,6 +37,10 @@ async fn handle_stream(stream: UnixStream, mut from: broadcast::Receiver<Signal>
 
         serial.push('\n');
         if let Err(err) = stream.try_write(serial.as_bytes()) {
+            if err.kind() == ErrorKind::BrokenPipe {
+                info!("client closed connection");
+                return;
+            }
             error!("unable to write data to the stream: {}", err);
             return;
         }
@@ -82,7 +87,6 @@ async fn main() {
     loop {
         match listener.accept().await {
             Ok((stream, _addr)) => {
-                info!("new connection accepted");
                 let local_rx = tx.subscribe();
                 tokio::spawn(async move {
                     handle_stream(stream, local_rx).await;

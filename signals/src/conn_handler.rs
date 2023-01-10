@@ -11,20 +11,6 @@ use tokio::sync::broadcast;
 // with the daemon.
 const SOCKET_PATH: &str = "/var/run/signals";
 
-// create_socket creates the unix socket file. if it already exists drops it
-// first and then create a new one.
-fn create_socket() -> UnixListener {
-    let _ = remove_file(SOCKET_PATH);
-    let listener = match UnixListener::bind(SOCKET_PATH) {
-        Ok(listener) => listener,
-        Err(err) => {
-            error!("error binding to socket {}: {}", SOCKET_PATH, err);
-            process::exit(1);
-        }
-    };
-    listener
-}
-
 // start starts the unix socket listener and handles incoming connections.
 pub async fn start(from: broadcast::Sender<Signal>) {
     let listener = create_socket();
@@ -33,6 +19,7 @@ pub async fn start(from: broadcast::Sender<Signal>) {
     loop {
         match listener.accept().await {
             Ok((stream, _addr)) => {
+                info!("new connection accepted");
                 let local_rx = from.subscribe();
                 tokio::spawn(async move {
                     handle_stream(stream, local_rx).await;
@@ -48,7 +35,6 @@ pub async fn start(from: broadcast::Sender<Signal>) {
 
 // handle_stream handles a single connection to the unix socket.
 async fn handle_stream(stream: UnixStream, mut from: broadcast::Receiver<Signal>) {
-    info!("new connection accepted");
     loop {
         let sig = match from.recv().await {
             Ok(sig) => sig,
@@ -79,4 +65,18 @@ async fn handle_stream(stream: UnixStream, mut from: broadcast::Receiver<Signal>
             return;
         }
     }
+}
+
+// create_socket creates the unix socket file. if it already exists drops it
+// first and then creates a new one.
+fn create_socket() -> UnixListener {
+    let _ = remove_file(SOCKET_PATH);
+    let listener = match UnixListener::bind(SOCKET_PATH) {
+        Ok(listener) => listener,
+        Err(err) => {
+            error!("error binding to socket {}: {}", SOCKET_PATH, err);
+            process::exit(1);
+        }
+    };
+    listener
 }

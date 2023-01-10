@@ -49,5 +49,5 @@ fn print_welcome() {
     info!(r"/_/\__/ / /___/ / /__  / / /_____/ / /    ");
     info!(r"\ \/___/ //\__\/_/___\/ / /______\/ /     ");
     info!(r" \_____\/ \/_________/\/___________/      ");
-    info!("signal emitter development version ");
+    info!(r"signal emitter development version        ");
 }

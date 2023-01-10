@@ -1,11 +1,17 @@
 pub mod conn_handler;
-pub mod emitters;
+pub mod emitter;
 
 use env_logger::Env;
 use log::{error, info};
+use std::fs::remove_file;
 use std::process;
+use tokio::net::UnixListener;
 use tokio::sync::broadcast;
 use users::get_current_uid;
+
+// SOCKET_PATH is the path to the unix socket that will be used to communicate
+// with the daemon.
+const SOCKET_PATH: &str = "/var/run/signals";
 
 #[tokio::main]
 async fn main() {
@@ -19,23 +25,35 @@ async fn main() {
         process::exit(1);
     }
 
-    info!("loading and attaching to the ebpf program");
+    // tx is the transmit side of the broadcast, we will send this over to the
+    // bpf handler. from the reader part of the broadcast we can receive all
+    // signals intercepted. We use a buffered channel in an attempt to avoid
+    // blocking.
     let (tx, _) = broadcast::channel(100);
-    let mut bpf = match emitters::SignalEmitter::new() {
-        Ok(bpf) => bpf,
+
+    // we need to keep a reference to the Bpf program in memory for the duration
+    // of the program otherwise the Bpf program will stop.
+    let _bpf = emitter::load_and_attach(tx.clone()).expect("failed to load bpf");
+
+    // creates a unix socket and starts listening for connections on it. messages
+    // are forwarded directly from the tx to the socket.
+    let socket = create_socket();
+    conn_handler::start(socket, tx).await;
+}
+
+// create_socket creates the unix socket file. if it already exists drops it
+// first and creates a new one.
+fn create_socket() -> UnixListener {
+    let _ = remove_file(SOCKET_PATH);
+    let listener = match UnixListener::bind(SOCKET_PATH) {
+        Ok(listener) => listener,
         Err(err) => {
-            error!("unable to load ebpf program: {}", err);
+            error!("error binding to socket {}: {}", SOCKET_PATH, err);
             process::exit(1);
         }
     };
-
-    if let Err(err) = bpf.attach(tx.clone()) {
-        error!("unable to attach to ebpf program: {}", err);
-        process::exit(1);
-    }
-
-    // start won't return until the program is terminated.
-    conn_handler::start(tx).await;
+    info!("unix socket created on {}", SOCKET_PATH);
+    listener
 }
 
 fn print_welcome() {
